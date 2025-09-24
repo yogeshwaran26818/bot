@@ -6,6 +6,7 @@ export default function ScrapedLinks({ uploadedUrl, onChatClick }) {
   const [links, setLinks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [training, setTraining] = useState(false);
+  const [isTrained, setIsTrained] = useState(false);
 
   useEffect(() => {
     if (uploadedUrl) {
@@ -25,17 +26,26 @@ export default function ScrapedLinks({ uploadedUrl, onChatClick }) {
     }
   };
 
-  const handleStartChat = async () => {
+  const handleTrain = async () => {
     setTraining(true);
     try {
       await ragAPI.train(uploadedUrl);
-      onChatClick?.();
+      setIsTrained(true);
+      alert('Training completed successfully!');
     } catch (error) {
       console.error('Training error:', error);
       alert('Training failed. Please try again.');
     } finally {
       setTraining(false);
     }
+  };
+
+  const handleStartChat = () => {
+    if (!isTrained) {
+      alert('Please train the model first before starting chat.');
+      return;
+    }
+    onChatClick?.();
   };
 
   if (!uploadedUrl) {
@@ -50,23 +60,32 @@ export default function ScrapedLinks({ uploadedUrl, onChatClick }) {
     <div className="card max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold">Scraped Links ({links.length})</h2>
-        <button
-          onClick={handleStartChat}
-          disabled={training || links.length === 0}
-          className="btn-primary flex items-center gap-2"
-        >
-          {training ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Training...
-            </>
-          ) : (
-            <>
-              <MessageCircle className="w-4 h-4" />
-              Start Chat
-            </>
-          )}
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={handleTrain}
+            disabled={training || links.length === 0 || isTrained}
+            className={`btn-primary flex items-center gap-2 ${isTrained ? 'bg-green-600' : ''}`}
+          >
+            {training ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Training...
+              </>
+            ) : isTrained ? (
+              '✅ Trained'
+            ) : (
+              '🧠 Train Model'
+            )}
+          </button>
+          <button
+            onClick={handleStartChat}
+            disabled={!isTrained}
+            className={`btn-primary flex items-center gap-2 ${!isTrained ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <MessageCircle className="w-4 h-4" />
+            Start Chat
+          </button>
+        </div>
       </div>
 
       {loading ? (

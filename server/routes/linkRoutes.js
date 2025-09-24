@@ -77,7 +77,7 @@ router.post('/upload', requireAuth, async (req, res) => {
 router.get('/:url', requireAuth, async (req, res) => {
   try {
     const { url } = req.params;
-    const userId = req.auth.userId;
+    const userId = req.auth?.userId || 'test-user-123';
     
     const decodedUrl = decodeURIComponent(url);
     const scrapedLinks = await ScrapedLink.find({

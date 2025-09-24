@@ -7,16 +7,24 @@ const router = express.Router();
 router.post('/register', requireAuth, async (req, res) => {
   try {
     console.log('Register route hit');
+    console.log('req.auth:', req.auth);
     
-    const userId = req.auth?.userId || 'test-user-123';
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const userId = req.auth.userId;
     
     let user = await User.findOne({ clerkId: userId });
     
     if (!user) {
+      const email = req.auth?.email || req.auth?.emailAddress || `user_${userId.slice(-8)}@example.com`;
+      const name = req.auth?.name || req.auth?.firstName || req.auth?.username || `User_${userId.slice(-4)}`;
+      
       user = new User({
         clerkId: userId,
-        email: 'test@example.com',
-        name: 'Test User'
+        email: email,
+        name: name
       });
       await user.save();
       console.log('User created:', user);
@@ -31,7 +39,11 @@ router.post('/register', requireAuth, async (req, res) => {
 
 router.get('/me', requireAuth, async (req, res) => {
   try {
-    const userId = req.auth?.userId || 'test-user-123';
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const userId = req.auth.userId;
     const user = await User.findOne({ clerkId: userId });
     if (!user) {
       return res.status(404).json({ error: 'User not found' });

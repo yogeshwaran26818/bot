@@ -124,20 +124,47 @@ app.get('/widget.js', (req, res) => {
       };
     },
     
+    parseMarkdown: function(text) {
+      return text
+        // Bold text **text**
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        // Headers ### text
+        .replace(/^### (.*$)/gm, '<h3 style="margin: 8px 0; font-size: 16px; font-weight: bold;">$1</h3>')
+        .replace(/^## (.*$)/gm, '<h2 style="margin: 10px 0; font-size: 18px; font-weight: bold;">$1</h2>')
+        .replace(/^# (.*$)/gm, '<h1 style="margin: 12px 0; font-size: 20px; font-weight: bold;">$1</h1>')
+        // Bullet points * item or - item
+        .replace(/^[*-] (.+)$/gm, '<li style="margin-left: 16px;">$1</li>')
+        // Numbered lists 1. item
+        .replace(/^\d+\. (.+)$/gm, '<li style="margin-left: 16px; list-style-type: decimal;">$1</li>')
+        // Line breaks
+        .replace(/\n/g, '<br>')
+        // Wrap consecutive <li> elements in <ul>
+        .replace(/(<li[^>]*>.*?<\/li>(?:\s*<li[^>]*>.*?<\/li>)*)/gs, '<ul style="margin: 8px 0; padding-left: 0;">$1</ul>');
+    },
+    
     addMessage: function(text, type) {
       const messages = document.getElementById('webbot-messages');
       const div = document.createElement('div');
       div.style.cssText = \`
         background: \${type === 'user' ? '#4F46E5' : 'white'};
-        color: \${type === 'user' ? 'white' : 'black'};
+        color: \${type === 'user' ? 'white' : '#374151'};
         padding: 12px;
         border-radius: 8px;
         margin-bottom: 12px;
         margin-left: \${type === 'user' ? 'auto' : '0'};
         margin-right: \${type === 'user' ? '0' : 'auto'};
         max-width: 80%;
+        line-height: 1.5;
+        font-size: 14px;
+        word-wrap: break-word;
       \`;
-      div.textContent = text;
+      
+      if (type === 'bot') {
+        div.innerHTML = this.parseMarkdown(text);
+      } else {
+        div.textContent = text;
+      }
+      
       messages.appendChild(div);
       messages.scrollTop = messages.scrollHeight;
     },
@@ -180,56 +207,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/links', linkRoutes);
 app.use('/api/rag', ragRoutes);
 
-// Test routes
+// Health check for monitoring
 app.get('/api/health', (req, res) => {
   res.json({ status: 'Server is running' });
-});
-
-app.post('/api/test', (req, res) => {
-  console.log('Test route hit:', req.body);
-  res.json({ message: 'Test successful', body: req.body });
-});
-
-app.get('/api/test-auth', requireAuth, (req, res) => {
-  console.log('Auth test:', req.auth);
-  res.json({ auth: req.auth });
-});
-
-app.get('/api/debug/pinecone', async (req, res) => {
-  try {
-    const { Pinecone } = require('@pinecone-database/pinecone');
-    
-    const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
-    const index = pc.index(process.env.PINECONE_INDEX_NAME);
-    
-    const stats = await index.describeIndexStats();
-    
-    res.json({
-      indexName: process.env.PINECONE_INDEX_NAME,
-      totalVectors: stats.totalVectorCount,
-      stats: stats
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.get('/api/debug/query-test', async (req, res) => {
-  try {
-    const pinecone = require('./services/pinecone');
-    const embedder = require('./services/embedder');
-    
-    const testEmbedding = await embedder.generateEmbedding("company");
-    const results = await pinecone.queryEmbeddings(testEmbedding, 3);
-    
-    res.json({ 
-      query: "company",
-      resultsCount: results.length,
-      results: results
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
 });
 
 module.exports = app;
