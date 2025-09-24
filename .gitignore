@@ -4,13 +4,14 @@ node_modules/
 
 # Environment variables
 .env
-*/.env
+.env.local
+.env.production
+.env.development
 
 # Build outputs
 dist/
 build/
-*/dist/
-*/build/
+.next/
 
 # Logs
 *.log
@@ -23,6 +24,15 @@ pids
 
 # Coverage directory used by tools like istanbul
 coverage/
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
 
 # IDE files
 .vscode/

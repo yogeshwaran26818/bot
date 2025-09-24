@@ -172,7 +172,9 @@ app.get('/widget.js', (req, res) => {
     queryBot: function(question) {
       this.addMessage('Thinking...', 'bot');
       
-      fetch('http://localhost:5000/api/rag/query', {
+      const baseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://your-app-name.vercel.app';
+      
+      fetch(`${baseUrl}/api/rag/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
