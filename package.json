@@ -1,0 +1,23 @@
+{
+  "name": "webbot-fullstack",
+  "version": "1.0.0",
+  "description": "WebBot RAG Chatbot - Full Stack",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "cd server && npm run dev"
+  },
+  "dependencies": {
+    "@clerk/clerk-sdk-node": "^4.13.1",
+    "@google/generative-ai": "^0.2.1",
+    "@pinecone-database/pinecone": "^1.1.2",
+    "axios": "^1.6.2",
+    "cheerio": "^1.0.0-rc.12",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "mongoose": "^8.0.3"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}

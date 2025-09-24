@@ -1,9 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.NODE_ENV === 'production' 
-    ? 'https://bot-backend-dun.vercel.app/api'
-    : '/api',
+  baseURL: 'https://bot-backend-dun.vercel.app/api',
 });
 
 // Add auth token to requests
@@ -20,6 +18,15 @@ api.interceptors.request.use(async (config) => {
   }
   return config;
 });
+
+// Add response interceptor for error logging
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('API Error:', error.response?.data || error.message);
+    return Promise.reject(error);
+  }
+);
 
 export const authAPI = {
   register: () => api.post('/auth/register'),
