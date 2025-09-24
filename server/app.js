@@ -13,7 +13,13 @@ const app = express();
 connectDB();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'https://bot-frontend-tau.vercel.app'
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 // Error handling middleware
