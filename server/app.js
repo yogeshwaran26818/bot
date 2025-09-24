@@ -174,7 +174,7 @@ app.get('/widget.js', (req, res) => {
       
       const baseUrl = window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://your-app-name.vercel.app';
       
-      fetch(`${baseUrl}/api/rag/query`, {
+      fetch(baseUrl + '/api/rag/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
