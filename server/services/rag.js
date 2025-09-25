@@ -1,44 +1,59 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const ScrapedLink = require('../models/ScrapedLink');
+const Link = require('../models/Link');
+const { getWebsiteModel } = require('../models/WebsiteData');
 const embedder = require('./embedder');
 const pinecone = require('./pinecone');
 
 class RAGService {
   constructor() {
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    this.embeddings = new Map();
   }
 
-  async trainRAG(userId, originalUrl) {
+  async trainRAG(linkId) {
     try {
-      const scrapedLinks = await ScrapedLink.find({ userId, originalUrl });
-      console.log(`Training RAG for userId: ${userId}, url: ${originalUrl}`);
-      console.log(`Found ${scrapedLinks.length} links for training`);
+      const link = await Link.findById(linkId);
+      if (!link) {
+        throw new Error('Link not found');
+      }
       
-      for (const link of scrapedLinks) {
-        if (link.pageContent) {
-          const embeddingVector = await embedder.generateEmbedding(link.pageContent);
+      const WebsiteModel = getWebsiteModel(linkId);
+      const websiteData = await WebsiteModel.find({ websiteId: linkId });
+      
+      console.log(`Training RAG for linkId: ${linkId}`);
+      console.log(`Found ${websiteData.length} documents for training`);
+      
+      for (const data of websiteData) {
+        if (data.content && !data.embedding.length) {
+          const embeddingVector = await embedder.generateEmbedding(data.content);
+          
+          // Create unique ID for Pinecone
+          const pineconeId = `${linkId}_${data._id.toString()}`;
           
           // Store embedding in Pinecone
           await pinecone.upsertEmbedding(
-            link._id.toString(),
+            pineconeId,
             embeddingVector,
             {
-              userId,
-              originalUrl,
-              anchorUrl: link.anchorUrl,
-              anchorText: link.anchorText,
-              scrapedLinkId: link._id.toString()
+              text: data.content.substring(0, 500), // First 500 chars
+              source_page: data.text || 'page',
+              section: 'content',
+              url: data.url,
+              linkId: linkId,
+              websiteId: data.websiteId
             }
           );
           
-          // Mark as embedded
-          link.isEmbedded = true;
-          await link.save();
+          // Mark as embedded in MongoDB (keep content, don't store embedding)
+          data.embedding = [1]; // Just mark as embedded
+          await data.save();
           
-          console.log(`✅ Embedded: ${link.anchorUrl}`);
+          console.log(`✅ Embedded: ${data.url}`);
         }
       }
+      
+      // Update link embedding status
+      link.isEmbedded = true;
+      await link.save();
       
       return { success: true, message: 'RAG training completed' };
     } catch (error) {
@@ -46,18 +61,18 @@ class RAGService {
     }
   }
 
-  async query(userId, question) {
+  async query(linkId, question) {
     try {
-      console.log('Querying for userId:', userId);
+      console.log('Querying for linkId:', linkId, 'question:', question);
       
       // Generate question embedding
       const questionEmbedding = await embedder.generateEmbedding(question);
       
       // Query Pinecone for similar embeddings
       const matches = await pinecone.queryEmbeddings(
-        questionEmbedding, 
-        3, 
-        { userId: { $eq: userId } }
+        questionEmbedding,
+        3,
+        { linkId: { $eq: linkId } }
       );
       
       console.log('Found Pinecone matches:', matches.length);
@@ -66,40 +81,40 @@ class RAGService {
         return "No trained data available. Please upload and train a website first.";
       }
       
-      // Get content from matched scraped links
-      const topResults = [];
-      for (const match of matches) {
-        const scrapedLink = await ScrapedLink.findById(match.metadata.scrapedLinkId);
-        if (scrapedLink) {
-          topResults.push({
-            content: scrapedLink.pageContent,
-            url: match.metadata.anchorUrl,
-            score: match.score
-          });
-        }
-      }
-      
-      const context = topResults.map(r => r.content).join('\n\n');
+      // Extract context from matches
+      const context = matches.map(match => match.metadata.text).join('\n\n');
       
       const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-      const prompt = `Based on the following context from the website, answer the user's question in a well-structured format:
+      const prompt = `You are a professional business assistant. Based on the provided website content, answer the user's question in a clear, professional manner.
 
-Context:
+Website Content:
 ${context}
 
-Question: ${question}
+User Question: ${question}
 
 Instructions:
-- Provide a clear, well-formatted answer
-- Use proper headings and bullet points where appropriate
-- Structure the information logically
-- Make it easy to read and understand
-- Only use information from the provided context
+- Provide a direct, professional response
+- Use clear, business-appropriate language
+- Structure information in paragraphs, not bullet points
+- Do not use markdown formatting (no *, #, -, etc.)
+- Only use information from the provided website content
+- If the information is not available, politely state that
 
-Answer:`;
+Professional Response:`;
 
       const result = await model.generateContent(prompt);
-      return result.response.text();
+      let response = result.response.text();
+      
+      // Clean up any remaining markdown formatting
+      response = response
+        .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove bold **text**
+        .replace(/\*(.*?)\*/g, '$1')     // Remove italic *text*
+        .replace(/^[*-]\s+/gm, '')      // Remove bullet points
+        .replace(/^#{1,6}\s+/gm, '')    // Remove headers
+        .replace(/`(.*?)`/g, '$1')      // Remove code formatting
+        .trim();
+      
+      return response;
     } catch (error) {
       throw new Error(`Query failed: ${error.message}`);
     }

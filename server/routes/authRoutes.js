@@ -19,12 +19,14 @@ router.post('/register', requireAuth, async (req, res) => {
     
     if (!user) {
       const email = req.auth?.email || req.auth?.emailAddress || `user_${userId.slice(-8)}@example.com`;
-      const name = req.auth?.name || req.auth?.firstName || req.auth?.username || `User_${userId.slice(-4)}`;
+      const firstName = req.auth?.firstName || req.auth?.name?.split(' ')[0] || 'User';
+      const lastName = req.auth?.lastName || req.auth?.name?.split(' ')[1] || '';
       
       user = new User({
         clerkId: userId,
         email: email,
-        name: name
+        firstName: firstName,
+        lastName: lastName
       });
       await user.save();
       console.log('User created:', user);

@@ -1,30 +1,22 @@
 const express = require('express');
-const User = require('../models/User');
+const Link = require('../models/Link');
 const ragService = require('../services/rag');
 const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.post('/train/:url', requireAuth, async (req, res) => {
+router.post('/train/:linkId', requireAuth, async (req, res) => {
   try {
-    const { url } = req.params;
+    const { linkId } = req.params;
     const userId = req.auth.userId;
     
-    const decodedUrl = decodeURIComponent(url);
+    // Verify link belongs to user
+    const link = await Link.findOne({ _id: linkId, userId });
+    if (!link) {
+      return res.status(404).json({ error: 'Link not found' });
+    }
     
-    await ragService.trainRAG(userId, decodedUrl);
-    
-    // Update user's link as trained
-    await User.findOneAndUpdate(
-      { 
-        clerkId: userId,
-        'uploadedLinks.url': decodedUrl
-      },
-      {
-        $set: { 'uploadedLinks.$.isTrained': true }
-      }
-    );
-
+    await ragService.trainRAG(linkId);
     res.json({ success: true, message: 'RAG training completed' });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -33,16 +25,20 @@ router.post('/train/:url', requireAuth, async (req, res) => {
 
 router.post('/query', requireAuth, async (req, res) => {
   try {
-    const { question } = req.body;
-    const userId = req.auth?.userId || 'test-user-123';
+    const { linkId, question } = req.body;
+    const userId = req.auth.userId;
     
-    console.log('Query request - userId:', userId, 'question:', question);
-
-    if (!question) {
-      return res.status(400).json({ error: 'Question is required' });
+    if (!question || !linkId) {
+      return res.status(400).json({ error: 'LinkId and question are required' });
     }
-
-    const answer = await ragService.query(userId, question);
+    
+    // Verify link belongs to user
+    const link = await Link.findOne({ _id: linkId, userId });
+    if (!link) {
+      return res.status(404).json({ error: 'Link not found' });
+    }
+    
+    const answer = await ragService.query(linkId, question);
     res.json({ answer });
   } catch (error) {
     console.error('Query error:', error);

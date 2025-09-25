@@ -2,7 +2,7 @@ import { useUser, UserButton } from '@clerk/clerk-react';
 import ChatBot from '../components/ChatBot';
 import { Bot, ArrowLeft } from 'lucide-react';
 
-export default function Chat({ onBackToDashboard }) {
+export default function Chat({ onBackToDashboard, linkId }) {
   const { user } = useUser();
 
   return (
@@ -30,7 +30,7 @@ export default function Chat({ onBackToDashboard }) {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <ChatBot />
+        <ChatBot linkId={linkId} />
       </main>
     </div>
   );

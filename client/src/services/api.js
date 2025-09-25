@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://bot-backend-dun.vercel.app/api',
+  baseURL: process.env.NODE_ENV === 'production' 
+    ? 'https://bot-backend-dun.vercel.app/api'
+    : 'http://localhost:5000/api',
 });
 
 // Add auth token to requests
@@ -36,11 +38,18 @@ export const authAPI = {
 export const linkAPI = {
   upload: (url) => api.post('/links/upload', { url }),
   getScrapedLinks: (url) => api.get(`/links/${encodeURIComponent(url)}`),
+  checkTrainingStatus: (url) => api.get(`/links/training-status/${encodeURIComponent(url)}`),
+  getLinkInfo: (linkId) => api.get(`/links/info/${linkId}`),
+  getUserLinks: () => api.get('/links/user-links'),
+  getWebsiteData: (linkId) => api.get(`/links/website-data/${linkId}`),
 };
 
 export const ragAPI = {
   train: (url) => api.post(`/rag/train/${encodeURIComponent(url)}`),
-  query: (question, model) => api.post('/rag/query', { question, model }),
+  trainLink: (linkId) => api.post(`/rag/train/${linkId}`),
+  query: (question, model, websiteUrl) => api.post('/rag/query', { question, model, websiteUrl }),
+  queryLink: (linkId, question) => api.post('/rag/query', { linkId, question }),
+  checkIfTrained: (url) => api.get(`/rag/check-trained/${encodeURIComponent(url)}`),
 };
 
 export default api;

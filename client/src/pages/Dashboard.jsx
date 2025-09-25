@@ -12,8 +12,8 @@ export default function Dashboard({ onNavigateToChat }) {
     setUploadedUrl(url);
   };
 
-  const handleChatClick = () => {
-    onNavigateToChat?.();
+  const handleChatClick = (linkId) => {
+    onNavigateToChat?.(linkId);
   };
 
   return (

@@ -19,7 +19,7 @@ export default function UploadLink({ onUploadSuccess }) {
       if (response.data.alreadyScraped) {
         setMessage(`✅ ${response.data.message}`);
       } else {
-        setMessage(`✅ Successfully scraped ${response.data.scrapedCount} links!`);
+        setMessage(`✅ Successfully scraped ${response.data.anchorCount} pages!`);
       }
       setUrl('');
       onUploadSuccess?.(url);

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ragAPI } from '../services/api';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
 
-export default function ChatBot() {
+export default function ChatBot({ linkId }) {
   const [messages, setMessages] = useState([
     { type: 'bot', content: 'Hello! I\'m ready to answer questions about the website you uploaded. What would you like to know?' }
   ]);
@@ -19,7 +19,10 @@ export default function ChatBot() {
     setLoading(true);
 
     try {
-      const response = await ragAPI.query(input);
+      if (!linkId) {
+        throw new Error('No link ID provided');
+      }
+      const response = await ragAPI.queryLink(linkId, input);
       const botMessage = { type: 'bot', content: response.data.answer };
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {

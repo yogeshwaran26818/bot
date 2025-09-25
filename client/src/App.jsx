@@ -10,6 +10,7 @@ const CLERK_PUBLISHABLE_KEY = 'pk_test_bm90ZWQtamF3ZmlzaC0xNi5jbGVyay5hY2NvdW50c
 function AppContent() {
   const { isSignedIn, user } = useUser();
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [currentLinkId, setCurrentLinkId] = useState(null);
 
   useEffect(() => {
     if (isSignedIn && user) {
@@ -22,13 +23,26 @@ function AppContent() {
     return <Home />;
   }
 
+  const handleNavigateToChat = (linkId) => {
+    setCurrentLinkId(linkId);
+    setCurrentPage('chat');
+  };
+
+  const handleBackToDashboard = () => {
+    setCurrentLinkId(null);
+    setCurrentPage('dashboard');
+  };
+
   return (
     <>
       {currentPage === 'dashboard' && (
-        <Dashboard onNavigateToChat={() => setCurrentPage('chat')} />
+        <Dashboard onNavigateToChat={handleNavigateToChat} />
       )}
       {currentPage === 'chat' && (
-        <Chat onBackToDashboard={() => setCurrentPage('dashboard')} />
+        <Chat 
+          onBackToDashboard={handleBackToDashboard} 
+          linkId={currentLinkId}
+        />
       )}
     </>
   );
